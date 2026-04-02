@@ -3,7 +3,6 @@ require_relative 'win_check'
 
 class Game
   include UI::GameUI
-  attr_accessor :board_state
 
   def initialize
     @board_state = Array.new(6) { COLUMNS.zip(Array.new(7, 'empty')).to_h }
@@ -11,27 +10,43 @@ class Game
   end
 
   def play
+    coords = game_loop
+    final_render(coords)
+  end
+
+  private
+
+  def game_loop
     coords = []
     until win?(coords) || board_full?
-      coords = []
-      clear
-      print_banner
-      current = @turn_toggle ? 'Red' : 'Blue'
-      display_board(@board_state, status: "#{current} to move — choose a column (a–g)")
-      truth_eval = lambda { |input|
-        input.match?(/\A[a-g]\z/) && @board_state[5][input] == 'empty'
-      }
-      input = validate_input(
-        '  Column: ',
-        truth_eval,
-        'a single letter a–g for a column that is not full.'
-      )
-      row = update_state(input)
-      coords << row
-      coords << input
-
-      @turn_toggle = !@turn_toggle
+      coords = take_turn
     end
+    coords
+  end
+
+  def take_turn
+    clear
+    print_banner
+    current = @turn_toggle ? 'Red' : 'Blue'
+    display_board(@board_state, status: "#{current} to move — choose a column (a–g)")
+    input = get_column_input
+    row = update_state(input)
+    @turn_toggle = !@turn_toggle
+    [row, input]
+  end
+
+  def get_column_input
+    truth_eval = lambda { |input|
+      input.match?(/\A[a-g]\z/) && @board_state[5][input] == 'empty'
+    }
+    validate_input(
+      '  Column: ',
+      truth_eval,
+      'a single letter a–g for a column that is not full.'
+    )
+  end
+
+  def final_render(coords)
     clear
     print_banner
     display_board(@board_state)
@@ -42,8 +57,6 @@ class Game
                 end
     display_game_over(outcome)
   end
-
-  private
 
   def board_full?
     @board_state.all? { |row| row.values.none? { |cell| cell == 'empty' } }
