@@ -154,15 +154,19 @@ describe Game do
       end
     end
 
-    context 'when several turns pass before a win' do
-      it 'returns the winning turn coords' do
+    context 'when neither win? nor board_full? is true yet' do
+      it 'keeps calling take_turn until win? or board_full? is true, then returns the last coords' do
         game = described_class.new
         allow(game).to receive(:take_turn).and_return([0, 'a'], [1, 'b'])
         allow(game).to receive(:win?).with([]).and_return(false)
         allow(game).to receive(:win?).with([0, 'a']).and_return(false)
         allow(game).to receive(:win?).with([1, 'b']).and_return(true)
         allow(game).to receive(:board_full?).and_return(false)
-        expect(game.game_loop).to eq([1, 'b'])
+
+        result = game.game_loop
+
+        expect(result).to eq([1, 'b'])
+        expect(game).to have_received(:take_turn).exactly(2).times
       end
     end
   end

@@ -2,52 +2,44 @@ require_relative 'ui'
 
 class WinCheck
   include UI
-  DIRECTIONS = {
-    [1, 1] => :d1, [-1, -1] => :d1,
-    [1, 0] => :h, [-1, 0] => :h,
-    [1, -1] => :d2, [-1, 1] => :d2,
-    [0, 1] => :v, [0, -1] => :v
-  }.freeze
+
+  # One vector per line family (horizontal, vertical, two diagonals).
+  LINE_DIRECTIONS = [[0, 1], [1, 0], [1, 1], [1, -1]].freeze
 
   def initialize(board_state, coords)
     @board_state = board_state
-    @row = @board_state[coords[0]]
-    @starting_token = @row[coords[1]]
     @row_idx = coords[0]
     @column_idx = COLUMNS.index(coords[1])
-    @matches = { d1: 0, h: 0, d2: 0, v: 0 }
+    @starting_token = @board_state[@row_idx][coords[1]]
   end
 
   def iterate_through_deltas
-    [1, 0, -1].product([1, 0, -1]).reject { |delta| delta == [0, 0] }.any? { |delta| win_eval(DIRECTIONS[delta], delta) }
+    return false if @starting_token == 'empty'
+
+    LINE_DIRECTIONS.any? { |row_delta, col_delta| line_length(row_delta, col_delta) >= 4 }
   end
 
-  private 
+  private
 
-  def win_eval(key, delta)
-    local_row = @row_idx
-    local_column = @column_idx
-    row_delta = delta[0]
-    column_delta = delta[1]
+  def line_length(row_delta, col_delta)
+    1 +
+      count_in_direction(row_delta, col_delta) +
+      count_in_direction(-row_delta, -col_delta)
+  end
 
-    loop do
-      next_row = local_row + row_delta
-      next_col_idx = local_column + column_delta
-      break if next_row < 0 || next_row > 5 || next_col_idx < 0 || next_col_idx > 6
-
-      next_column = COLUMNS[next_col_idx]
-      next_item = @board_state[next_row][next_column]
-
-      if @starting_token == next_item
-        local_row += row_delta
-        local_column += column_delta
-        @matches[DIRECTIONS[delta]] += 1
-        return true if @matches[key] == 3
-        next
-      end
-      return true if @matches[key] == 3
-      break
+  def count_in_direction(row_delta, col_delta)
+    n = 0
+    r = @row_idx + row_delta
+    c = @column_idx + col_delta
+    while r.between?(0, 5) && c.between?(0, 6) && cell(r, c) == @starting_token
+      n += 1
+      r += row_delta
+      c += col_delta
     end
-    false
+    n
+  end
+
+  def cell(row, col)
+    @board_state[row][COLUMNS[col]]
   end
 end
